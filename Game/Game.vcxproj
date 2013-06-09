@@ -1,0 +1,112 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{D7C95553-C15F-4E6B-943A-DA2EF800FA7F}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>Game</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v110</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v110</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;FTGL_LIBRARY_STATIC ;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\freeglut-2.8.0\include;C:\glew-1.9.0\include;C:\sfml-2.0-rc\include;C:\Program Files\Assimp\include;C:\glm-0.9.4.3;C:\Users\Jin\Dropbox\CODING\Libraries\Laptop\freetype-2.4.0\include;C:\Users\Jin\Dropbox\CODING\Libraries\Laptop\ftgl-2.1.3\src;C:\soil\src</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>C:\Users\Jin\Dropbox\CODING\Libraries\Laptop\ftgl-2.1.3\msvc\Build;C:\Users\Jin\Dropbox\CODING\Libraries\Laptop\freetype-2.4.0\objs\win32\vc2008;C:\freeglut-2.8.0\lib\x86\Debug;C:\glew-1.9.0\lib;C:\sfml-2.0-rc\lib;C:\Program Files\Assimp\lib\x86;C:\soil\projects\VC9\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opengl32.lib;assimp.lib;SOIL.lib;freetype240_D.lib;ftgl_static_D.lib;glew32d.lib;glew32mxd.lib;sfml-audio-d.lib;sfml-graphics-d.lib;sfml-main-d.lib;sfml-network-d.lib;sfml-system-d.lib;sfml-window-d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;FTGL_LIBRARY_STATIC ;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\freeglut-2.8.0\include;C:\glew-1.9.0\include;C:\sfml-2.0-rc\include;C:\Program Files\Assimp\include;C:\glm-0.9.4.3;C:\Libraries\freetype-2.4.0\include;C:\Libraries\ftgl-2.1.3\src;C:\soil\src</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>C:\Users\Jin\Dropbox\CODING\Libraries\Laptop\ftgl-2.1.3\msvc\Build;C:\Users\Jin\Dropbox\CODING\Libraries\Laptop\freetype-2.4.0\objs\win32\vc2008;C:\freeglut-2.8.0\lib\x86;C:\glew-1.9.0\lib;C:\sfml-2.0-rc\lib;C:\Program Files\Assimp\lib\x86;%(AdditionalLibraryDirectories);C:\soil\projects\VC9\Release</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opengl32.lib;assimp.lib;SOIL.lib;freetype240.lib;ftgl_static.lib;glew32.lib;glew32mx.lib;sfml-audio.lib;sfml-graphics.lib;sfml-main.lib;sfml-network.lib;sfml-system.lib;sfml-window.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="DisplaceTerrain.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="Mesh.cpp" />
+    <ClCompile Include="MeshList.cpp" />
+    <ClCompile Include="mtrand.cpp" />
+    <ClCompile Include="QuadTree.cpp" />
+    <ClCompile Include="Shader.cpp" />
+    <ClCompile Include="ShaderList.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Camera.hpp" />
+    <ClInclude Include="DisplaceTerrain.hpp" />
+    <ClInclude Include="event_logger.h" />
+    <ClInclude Include="MarchingCubesLUT.hpp" />
+    <ClInclude Include="MasterInclude.hpp" />
+    <ClInclude Include="Mesh.hpp" />
+    <ClInclude Include="MeshList.hpp" />
+    <ClInclude Include="mtrand.h" />
+    <ClInclude Include="QuadTree.hpp" />
+    <ClInclude Include="Quaternion.hpp" />
+    <ClInclude Include="Shader.hpp" />
+    <ClInclude Include="ShaderList.hpp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
