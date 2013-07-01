@@ -6,15 +6,23 @@
 #include <cstdarg>
 #include <iostream>
 #include <iomanip>
+#include <glm/gtc/matrix_transform.hpp>
 
-//math funcs
-void normalize(glm::vec3 &vector){
-	float mag = sqrtf((vector.x*vector.x)
-					+ (vector.y*vector.y)
-					+ (vector.z*vector.z));
-	vector.x /= mag;
-	vector.y /= mag;
-	vector.z /= mag;
+////math funcs
+//void normalize(glm::vec3 &vector){
+//	float mag = sqrtf((vector.x*vector.x)
+//					+ (vector.y*vector.y)
+//					+ (vector.z*vector.z));
+//	vector.x /= mag;
+//	vector.y /= mag;
+//	vector.z /= mag;
+//}
+
+//int logBase2(int num);
+
+float length(glm::vec3 vec){
+	float num = vec.x * vec.x + vec.y * vec.y + vec.z * vec.z;
+	return sqrtf(num);
 }
 
 glm::vec3 getAvgNormal(vector<glm::vec3> &normals, int i, int j, int n){
@@ -31,53 +39,43 @@ glm::vec3 getAvgNormal(vector<glm::vec3> &normals, int i, int j, int n){
 	return ans;
 }
 
-float DisplaceTerrain::getPseudoRand(float max, float min){
-	if(!seedSet){
-		cout << "Error! Random seed not specified! Exiting.." << endl;
-		event_log << "Error! Random seed not specified! Exiting.." << endl;
-		exit(-1);
-	}
-	else {
-		//seed = logf(seed+1);
-		//seed++;
-	}
-	
-	float num = rand_height();
+//glm::vec3 getAvgQuadNormal(vector<glm::vec3> &normals, int i, int n){
+//	glm::vec3 ans;
+//	ans = 
+//		normals[]
+//	ans /= 6;
+//	normalize(ans);
+//	return ans;
+//}
 
-	//event_log << "for seed " << seed << ": " << num << endl;
+////Cross product of 2 vectors
+////INPUT:	takes floats of 2 vectors and calculates cross product
+////OUTPUT:	glm::vec3 object
+//glm::vec3 cross(float ax,float ay, float az, float bx, float by, float bz){
+//	glm::vec3 ans;
+//	ans.x = ay*bz - az*by;
+//	ans.y = az*bx - ax*bz;
+//	ans.z = ax*by - ay*bx; 
+//	normalize(ans);
+//	return ans;
+//}
+//
+////Cross product of 2 vectors
+////INPUT:	Takes 2 glm::vec3 objects
+////OUTPUT:	glm::vec3 object
+//glm::vec3 cross(glm::vec3 a, glm::vec3 b){
+//	glm::vec3 ans;
+//	ans.x = a.y*b.z - a.z*b.y;
+//	ans.y = a.z*b.x - a.x*b.z;
+//	ans.z = a.x*b.y - a.y*b.x; 
+//	normalize(ans);
+//	return ans;
+//}
 
-	//float ans = fmod(rand(), max - min + 1) + min;
-
-	return num*max + (1-num)*min;
-}
-
-//Cross product of 2 vectors
-//INPUT:	takes floats of 2 vectors and calculates cross product
-//OUTPUT:	glm::vec3 object
-glm::vec3 cross(float ax,float ay, float az, float bx, float by, float bz){
-	glm::vec3 ans;
-	ans.x = ay*bz - az*by;
-	ans.y = az*bx - ax*bz;
-	ans.z = ax*by - ay*bx; 
-	normalize(ans);
-	return ans;
-}
-
-//Cross product of 2 vectors
-//INPUT:	Takes 2 glm::vec3 objects
-//OUTPUT:	glm::vec3 object
-glm::vec3 cross(glm::vec3 a, glm::vec3 b){
-	glm::vec3 ans;
-	ans.x = a.y*b.z - a.z*b.y;
-	ans.y = a.z*b.x - a.x*b.z;
-	ans.z = a.x*b.y - a.y*b.x; 
-	normalize(ans);
-	return ans;
-}
-
-DisplaceTerrain::DisplaceTerrain(int n, float height, float reduction, float tile_size) 
+DisplaceTerrain::DisplaceTerrain(int n, float height, float reduction, float tile_size, Camera *cam) 
 	: n(n), height(height), reduction(reduction), tile_size(tile_size), seed(-999),
-	  seedSet(false){
+	seedSet(false), root(NULL), LOD_Levels(logBase2(n)+1),
+	camView(cam->getFrustum()), min_distance(9999) {
 
 	map.resize(n+1);
 	for(int j = 0; j < n+1; j++){
@@ -91,14 +89,67 @@ DisplaceTerrain::DisplaceTerrain(int n, float height, float reduction, float til
 	map[0][n] = height;
 	map[n][0] = height;
 	map[n][n] = height;
-	
+
+	initLOD();
 }
+
+//copy constructor
+DisplaceTerrain::DisplaceTerrain(const DisplaceTerrain& rhs){
+	*this = rhs;
+}
+
+//copy assignment operator
+DisplaceTerrain DisplaceTerrain::operator=(const DisplaceTerrain& rhs){
+	superduper::operator=(rhs);
+	n = rhs.n;
+	seed = rhs.seed;
+	seedSet = rhs.seedSet;
+	LOD_Levels = rhs.LOD_Levels;
+	height = rhs.height;
+	reduction = rhs.reduction;
+	tile_size = rhs.tile_size;
+	min_distance = rhs.min_distance;
+
+	for(int i = 0; i < map.size(); i++){
+		for(int j = 0; j < map[i].size(); j++){ 
+			map[i][j] = rhs.map[i][j];
+		}
+	}
+	for(int i = 0; i < gradient_map.size(); i++){
+		for(int j = 0; j < gradient_map[i].size(); j++){ 
+			gradient_map[i][j] = rhs.gradient_map[i][j];
+		}
+	}
+
+	for(int k = 0; k < LOD_Levels; k++){
+		lod_ranges[k] = rhs.lod_ranges[k];
+	}
+
+	for(int p = 0; p < root->getTotalNodes(); p++){
+		root[p] = rhs.root[p];
+	}
+
+	return *this;
+}
+
+void DisplaceTerrain::initLOD(){
+	lod_ranges = new float[LOD_Levels];
+	lod_ranges[0] = n * (8.0f * tile_size) / 128;
+	for(int i = 1; i < LOD_Levels; i++){
+		lod_ranges[i] = lod_ranges[i-1] * 2;
+	}
+}
+
+//void DisplaceTerrain::setCamera(Camera *cam){
+//	root->initCam(cam);
+//}
 
 DisplaceTerrain::~DisplaceTerrain(){
 	//for(int i = 0; i < n+1; i++){
 	//	delete[] map[i];
 	//}
 	//delete[] map;
+	delete[] lod_ranges;
 	delete root;
 }
 
@@ -123,7 +174,7 @@ void DisplaceTerrain::setSeed(int seed){
 	seedSet = true;
 }
 
-void DisplaceTerrain::construct(int n, float height, float reduction, float tile_size){
+void DisplaceTerrain::construct(int n, float height, float reduction, float tile_size, bool drawOutline){
 	if(this->n < n){
 		//reinit 2d array
 
@@ -137,7 +188,7 @@ void DisplaceTerrain::construct(int n, float height, float reduction, float tile
 	this->height = height;
 	this->reduction = reduction;
 	this->tile_size = tile_size;
-	construct();
+	construct(drawOutline);
 }
 
 //generates a terrain mesh from map data
@@ -152,211 +203,334 @@ void DisplaceTerrain::updateMesh(){
 	if(textureLoaded)
 		g_vt.resize(g_vert_count*2);
 
+	int mapWidth = n/(root->getLOD()+1);
+
 	// n x n grid mesh has n*n squares, and (n+1)*(n+1) vertices
 	//However, each square is composed of 2 triangles, and each
 	//	triangle is composed of 3 vertices. So, g_vp will have 3x the 
 	//	total number of triangles, which is always: n*n*2.
 	//For each square, draw 2 triangles
-	for(int i = 0; i < n; i++){
-		for(int j = 0; j < n; j++){
+	for(int i = 0; i < n; i++) {
+		for(int j = 0; j < n; j++) {
+			glm::vec3 topleft(	j*tile_size, 
+								root->getDataPointAt(j, i), 
+								i*tile_size);
+			glm::vec3 botleft(	j*tile_size, 
+								root->getDataPointAt(j, i+1), 
+								(i+1)*tile_size);
 
-			//Normal Calculation
-			glm::vec3 topleft(j*tile_size,map[i][j],i*tile_size);
-			glm::vec3 botleft(j*tile_size,map[i+1][j],(i+1)*tile_size);
-			glm::vec3 topright((j+1)*tile_size,map[i][j+1],i*tile_size);
-			glm::vec3 botright((j+1)*tile_size,map[i+1][j+1],(i+1)*tile_size);
+			glm::vec3 topright(	(j+1)*tile_size,
+								root->getDataPointAt(j+1, i),
+								i*tile_size);
 
-			// triangle 1 normals: (topright - botleft) X (topleft - botleft)
-			glm::vec3 normal1 = cross( (topright - botleft) , (topleft - botleft) );
-			normalize(normal1);
+			glm::vec3 botright(	(j+1)*tile_size,
+								root->getDataPointAt(j+1, i+1),
+								(i+1)*tile_size);
+
+			createTile(topleft, topright, botleft, botright, normals, false, root->getLOD(), i, j, n);
 			
-			// triangle 2 normals: (botright - botleft) X (topright - botleft)
-			glm::vec3 normal2 = cross( (botright - botleft) , (topright - botleft) );
-			normalize(normal2);
-
-			//***************
-			//	TRIANGLE 1
-			//***************
-			//top left corner verts
-			g_vp[(18*n*i)+(18*j)] = topleft.x;		//x
-			g_vp[(18*n*i)+(18*j)+1] = topleft.y;		//y
-			g_vp[(18*n*i)+(18*j)+2] = topleft.z;		//z
-
-			//top left corner normals
-			normals[(6*n*i)+(6*j)] = normal1;	
-
-
-			//top left corner tex coords
-			if (textureLoaded) {
-				g_vt[(12*n*i)+(12*j)] = j*(1.0f/n);	
-				g_vt[(12*n*i)+(12*j)+1] = i*(1.0f/n); 
-			}
-
-			//bottom left corner verts
-			g_vp[(18*n*i)+(18*j)+3] = botleft.x;		//x
-			g_vp[(18*n*i)+(18*j)+4] = botleft.y;		//y
-			g_vp[(18*n*i)+(18*j)+5] = botleft.z;		//z
-
-			//bottom left corner normals
-			normals[(6*n*i)+(6*j)+1] = normal1;
-
-
-			//bottom left corner tex coords
-			if(textureLoaded) {
-				g_vt[(12*n*i)+(12*j)+2] = j*(1.0f/n);	
-				g_vt[(12*n*i)+(12*j)+3] = (i+1)*(1.0f/n);
-			}
-
-			//top right corner verts
-			g_vp[(18*n*i)+(18*j)+6] = topright.x;		//x
-			g_vp[(18*n*i)+(18*j)+7] = topright.y;		//y
-			g_vp[(18*n*i)+(18*j)+8] = topright.z;		//z
-
-			//top right corner normals
-			normals[(6*n*i)+(6*j)+2] = normal1;
-
-
-			//top right corner tex coords
-			if(textureLoaded) {
-				g_vt[(12*n*i)+(12*j)+4] = (j+1)*(1.0f/n);	
-				g_vt[(12*n*i)+(12*j)+5] = i*(1.0f/n);
-			}
-
-
-			//***************
-			//	TRIANGLE 2
-			//***************
-			//bottom left corner
-			g_vp[(18*n*i)+(18*j)+9] = botleft.x;		//x
-			g_vp[(18*n*i)+(18*j)+10] = botleft.y;		//y
-			g_vp[(18*n*i)+(18*j)+11] = botleft.z;		//z
-
-			//bottom left corner normals
-			normals[(6*n*i)+(6*j)+3] = normal2;
-
-
-			//bottom left corner tex coords
-			if(textureLoaded) {
-				g_vt[(12*n*i)+(12*j)+6] = j*(1.0f/n);	
-				g_vt[(12*n*i)+(12*j)+7] = (i+1)*(1.0f/n);
-			}
-
-
-			//bottom right corner
-			g_vp[(18*n*i)+(18*j)+12] = botright.x;		//x
-			g_vp[(18*n*i)+(18*j)+13] = botright.y;		//y
-			g_vp[(18*n*i)+(18*j)+14] = botright.z;		//z
-
-			//bottom right corner normals
-			normals[(6*n*i)+(6*j)+4] = normal2;
-
-
-			//bottom right corner tex coords
-			if(textureLoaded) {
-				g_vt[(12*n*i)+(12*j)+8] = (j+1)*(1.0f/n);	
-				g_vt[(12*n*i)+(12*j)+9] = (i+1)*(1.0f/n);
-			}
-
-
-			//top right corner
-			g_vp[(18*n*i)+(18*j)+15] = topright.x;		//x
-			g_vp[(18*n*i)+(18*j)+16] = topright.y;		//y
-			g_vp[(18*n*i)+(18*j)+17] = topright.z;		//z
-
-			//top right corner normals
-			normals[(6*n*i)+(6*j)+5] = normal2;
-
-
-			//top right corner tex coords
-			if(textureLoaded) {
-				g_vt[(12*n*i)+(12*j)+10] = (j+1)*(1.0f/n);	
-				g_vt[(12*n*i)+(12*j)+11] = i*(1.0f/n);
-			}
-
 		}
 	}
-	glm::vec3 avgNormal;
-	for(int i = 0; i < n; i++){
+
+	//calculate the normals
+	for(int i = 0; i < n; i++) {
 		for(int j = 0; j < n; j++){
-
-			//***************
-			//	Triangle 1
-			//***************
-
-			//top left
-			avgNormal = getAvgNormal(normals,i,j,n);
-			g_vn[(18*n*i)+(18*j)] = avgNormal.x;
-			g_vn[(18*n*i)+(18*j)+1] = avgNormal.y;
-			g_vn[(18*n*i)+(18*j)+2] = avgNormal.z;
-
-			//bottom left
-			avgNormal = getAvgNormal(normals,(i+1),j,n);
-			g_vn[(18*n*i)+(18*j)+3] = avgNormal.x;
-			g_vn[(18*n*i)+(18*j)+4] = avgNormal.y;
-			g_vn[(18*n*i)+(18*j)+5] = avgNormal.z;
-
-			//top right
-			avgNormal = getAvgNormal(normals,i,(j+1),n);
-			g_vn[(18*n*i)+(18*j)+6] = avgNormal.x;
-			g_vn[(18*n*i)+(18*j)+7] = avgNormal.y;
-			g_vn[(18*n*i)+(18*j)+8] = avgNormal.z;
-
-
-			//***************
-			//	Triangle 2
-			//***************
-
-			//bottom left
-			avgNormal = getAvgNormal(normals,(i+1),j,n);
-			g_vn[(18*n*i)+(18*j)+9] = avgNormal.x;
-			g_vn[(18*n*i)+(18*j)+10] = avgNormal.y;
-			g_vn[(18*n*i)+(18*j)+11] = avgNormal.z;
-
-			//bottom right
-			avgNormal = getAvgNormal(normals,(i+1),(j+1),n);
-			g_vn[(18*n*i)+(18*j)+12] = avgNormal.x;
-			g_vn[(18*n*i)+(18*j)+13] = avgNormal.y;
-			g_vn[(18*n*i)+(18*j)+14] = avgNormal.z;
-
-			//top right
-			avgNormal = getAvgNormal(normals,i,(j+1),n);
-			g_vn[(18*n*i)+(18*j)+15] = avgNormal.x;
-			g_vn[(18*n*i)+(18*j)+16] = avgNormal.y;
-			g_vn[(18*n*i)+(18*j)+17] = avgNormal.z;
-
+			calcNormals(normals, j, i, n);
 		}
 	}
-	baseModelMatrix = glm::mat4(1.0);
-	baseModelMatrix[3] = glm::vec4(-(n*tile_size)/2, -3.0, -(n*tile_size)/2, 1.0);
-	modelMatrix = apply_model_mat * baseModelMatrix;
+	//baseModelMatrix = glm::mat4(1.0);
+	//baseModelMatrix = glm::translate( baseModelMatrix, glm::vec3(-(n*tile_size)/2, -3.0f, -(n*tile_size)/2) );
+	//eng::quat rot90;
+	//rot90.buildFromAxis(glm::vec3(1.0f,0.0f,0.0f), 90.0f);
+	//baseModelMatrix = rot90.getMatrix() * baseModelMatrix;
+	//modelMatrix = apply_model_mat * baseModelMatrix;
 	//diffuse_reflectance = glm::vec3(0.7, 0.7, 0.3);
 	meshLoaded = true;
 }
 
-void DisplaceTerrain::updateQuadMesh(){
+void DisplaceTerrain::updateQuadMesh(bool drawOutline){
+	//float lod_ranges[] = {10, 20, 40, 80, 160, 320, 640};
+	root->initSelectionList(n*n);
+	//root->initCamPos(camPos);
+	root->select(lod_ranges, LOD_Levels-1, *camView.origin, camView);
+	QuadTree **selection = root->getSelectedNodes();
+	//if(root->getNumSelected() == 0){
+	//	std::cout << "updateQuadMesh: ERROR! No nodes selected" << std::endl;
+	//	event_log << "updateQuadMesh: ERROR! No nodes selected" << std::endl;
+	//	system("pause");
+	//	exit(-1);
+	//}
+	int renderSize = root->getNumSelected();
+	if(drawOutline)
+		g_vert_count = renderSize*16;
+	else
+		g_vert_count = renderSize*6;
+	g_vp.resize(g_vert_count*3);
+	g_vn.resize(g_vert_count*3);
+	if(textureLoaded)
+		g_vt.resize(g_vert_count*2);
+	std::vector<glm::vec3> normals(g_vert_count);
+	for(int j = 0; j < renderSize; j++){
+		glm::vec3 topleft(selection[j]->getBox()[NW].getVec3());
+
+		glm::vec3 topright(selection[j]->getBox()[NE].getVec3());
+
+		glm::vec3 botleft(selection[j]->getBox()[SW].getVec3());
+
+		glm::vec3 botright(selection[j]->getBox()[SE].getVec3());
+
+		createTile(topleft, topright, botleft, botright, normals, drawOutline, selection[j]->getLOD(), j); 
+
+	}
+
+	//calculate the normals
+	for(int i = 0; i < renderSize; i++) {
+		calcNormals(normals, 0, i, 1);
+	}
+	//baseModelMatrix = glm::mat4(1.0);
+	//baseModelMatrix[3] = glm::vec4(-(n*tile_size)/2, -3.0, -(n*tile_size)/2, 1.0);
+	//modelMatrix = apply_model_mat * baseModelMatrix;
+	////diffuse_reflectance = glm::vec3(0.7, 0.7, 0.3);
+	meshLoaded = true;
 }
 
-void DisplaceTerrain::construct(){
+
+void DisplaceTerrain::createTile(glm::vec3 &topleft, glm::vec3 &topright, glm::vec3 &botleft, 
+	glm::vec3 &botright, std::vector<glm::vec3> &normals, bool drawOutline, int LOD_level, int yDim, int xDim,  int n){
+	
+	int interval, offset = 0;
+	float oldHeights[4];
+	glm::vec3 *corners = new glm::vec3[4];
+	
+
+	if(!drawOutline) interval = 18;
+	else { 
+		interval = 48; 		
+		oldHeights[0] = topleft.y;
+		oldHeights[1] = botleft.y;
+		oldHeights[2] = botright.y;
+		oldHeights[3] = topright.y;
+		topleft.y = height*(LOD_level+1);
+		botleft.y = height*(LOD_level+1);
+		botright.y = height*(LOD_level+1);
+		topright.y = height*(LOD_level+1);
+		corners[0] = topleft;
+		corners[1] = botleft;
+		corners[2] = botright;
+		corners[3] = topright;
+	}
+
+
+	//calculate face normals
+
+	// triangle 1 normals: (topright - botleft) X (topleft - botleft)
+	glm::vec3 normal1 = crossProduct( (topright - botleft) , (topleft - botleft) );
+	normalize(normal1);
+
+	// triangle 2 normals: (botright - botleft) X (topright - botleft)
+	glm::vec3 normal2 = crossProduct( (botright - botleft) , (topright - botleft) );
+	normalize(normal2);
+
+
+	
+	//***************
+	//	TRIANGLE 1
+	//***************
+
+
+	//top left corner 
+	createPoint(topleft, PT_VERTEX, (interval*n*yDim)+(interval*xDim), offset);
+	normals[(6*n*yDim)+(6*xDim) + offset] = normal1;	
+	if (textureLoaded) {
+		createPoint( glm::vec3(xDim*(1.0f/n), yDim*(1.0f/n), 0.0f), 
+					PT_TEXTURE, (12*n*yDim)+(12*xDim), offset );
+	}
+	offset++;
+
+	
+	//bottom left corner
+	createPoint(botleft, PT_VERTEX, (interval*n*yDim)+(interval*xDim), offset);
+	normals[(6*n*yDim)+(6*xDim)+offset] = normal1;
+	if(textureLoaded) {
+		createPoint( glm::vec3(xDim*(1.0f/n), (yDim+1)*(1.0f/n), 0.0f), 
+					PT_TEXTURE, (12*n*yDim)+(12*xDim), offset );
+	}
+	offset++;
+
+
+	if(!drawOutline) {
+		//top right corner
+		createPoint(topright, PT_VERTEX, (interval*n*yDim)+(interval*xDim), offset);
+		normals[(6*n*yDim)+(6*xDim)+offset] = normal1;
+		if(textureLoaded) {
+			createPoint( glm::vec3((xDim+1)*(1.0f/n), yDim*(1.0f/n), 0.0f), 
+					PT_TEXTURE, (12*n*yDim)+(12*xDim), offset );
+		}
+		offset++;
+	}
+
+
+
+	//***************
+	//	TRIANGLE 2
+	//***************
+
+
+	//bottom left corner
+	createPoint(botleft, PT_VERTEX, (interval*n*yDim)+(interval*xDim), offset);
+	normals[(6*n*yDim)+(6*xDim)+offset] = normal2;
+	if(textureLoaded) {
+		createPoint( glm::vec3(xDim*(1.0f/n), (yDim+1)*(1.0f/n), 0.0f), 
+			PT_TEXTURE, (12*n*yDim)+(12*xDim), offset );
+	}
+	offset++;
+	
+
+	//bottom right corner
+	createPoint(botright, PT_VERTEX, (interval*n*yDim)+(interval*xDim), offset);
+	normals[(6*n*yDim)+(6*xDim)+offset] = normal2;
+	if(textureLoaded) {
+		createPoint( glm::vec3((xDim+1)*(1.0f/n), (yDim+1)*(1.0f/n), 0.0f), 
+					PT_TEXTURE, (12*n*yDim)+(12*xDim), offset );
+	}
+	offset++;
+
+
+	if(drawOutline){
+		//bottom right corner
+		createPoint(botright, PT_VERTEX, (interval*n*yDim)+(interval*xDim), offset++);
+	}
+
+	//top right corner
+	createPoint(topright, PT_VERTEX, (interval*n*yDim)+(interval*xDim), offset);
+	normals[(6*n*yDim)+(6*xDim)+offset] = normal2;
+	if(textureLoaded) {
+		createPoint( glm::vec3((xDim+1)*(1.0f/n), yDim*(1.0f/n), 0.0f), 
+					PT_TEXTURE, (12*n*yDim)+(12*xDim), offset );
+	}
+	offset++;
+
+	if(drawOutline) {
+		// top right and top left for the last line segment
+
+		//top right corner
+		createPoint(topright, PT_VERTEX, (interval*n*yDim)+(interval*xDim), offset++);
+
+		//top left corner 
+		createPoint(topleft, PT_VERTEX, (interval*n*yDim)+(interval*xDim), offset++);
+	}
+
+	//DEBUGGING:	draw line segments from debugging mesh to terrain
+	if(drawOutline){
+		for(int k = 0; k < 4; k++){
+			createPoint(corners[k], PT_VERTEX, (interval*n*yDim)+(interval*xDim), offset++);
+			corners[k].y = oldHeights[k];
+			createPoint(corners[k], PT_VERTEX, (interval*n*yDim)+(interval*xDim), offset++);
+		}
+	}
+
+	delete corners;
+}
+
+void DisplaceTerrain::calcNormals(std::vector<glm::vec3> &normals, int xDim, int yDim, int n){
+
+	glm::vec3 avgNormal;
+	int offset = 0;
+
+	//***************
+	//	Triangle 1
+	//***************
+
+	for(int j = 0; j < 6; j++){
+		//top left
+		avgNormal = normals[6*n*yDim + j];
+		createPoint(avgNormal, PT_NORMAL, (18*n*yDim)+(18*xDim), j);
+	}
+
+
+	/*
+	//bottom left
+	avgNormal = getAvgNormal(normals,(yDim+1),xDim,n);
+	createPoint(avgNormal, PT_NORMAL, (18*n*yDim)+(18*xDim), offset++);
+
+	//top right
+	avgNormal = getAvgNormal(normals,yDim,(xDim+1),n);
+	createPoint(avgNormal, PT_NORMAL, (18*n*yDim)+(18*xDim), offset++);
+
+
+	//***************
+	//	Triangle 2
+	//***************
+
+	//bottom left
+	avgNormal = getAvgNormal(normals,(yDim+1),xDim,n);
+	createPoint(avgNormal, PT_NORMAL, (18*n*yDim)+(18*xDim), offset++);
+
+	//bottom right
+	avgNormal = getAvgNormal(normals,(yDim+1),(xDim+1),n);
+	createPoint(avgNormal, PT_NORMAL, (18*n*yDim)+(18*xDim), offset++);
+
+	//top right
+	avgNormal = getAvgNormal(normals,yDim,(xDim+1),n);
+	createPoint(avgNormal, PT_NORMAL, (18*n*yDim)+(18*xDim), offset++);
+	*/
+}
+
+void DisplaceTerrain::createPoint(glm::vec3 pt, PointType type, int index, int offset){
+	switch(type) {
+	case PT_VERTEX:
+		g_vp[index + 3*offset] = pt.x;
+		g_vp[index + 3*offset + 1] = pt.y;
+		g_vp[index + 3*offset + 2] = pt.z;
+		break;
+	case PT_NORMAL:
+		g_vn[index + 3*offset] = pt.x;
+		g_vn[index + 3*offset + 1] = pt.y;
+		g_vn[index + 3*offset + 2] = pt.z;
+		break;
+	case PT_TEXTURE:
+		g_vt[index + 2*offset] = pt.x;
+		g_vt[index + 2*offset + 1] = pt.y;
+		break;
+	default:
+		break;
+	}
+}
+
+void DisplaceTerrain::construct(bool drawOutline){
+
 	construct(Vector2i (0,0), n, 2*height);
-	updateMesh();
+	//initLOD();
+	updateQuadMesh(drawOutline);
+	//updateMesh();
+	//baseModelMatrix = glm::mat4(1.0);
+	//baseModelMatrix[3] = glm::vec4(-(n*tile_size)/2, -3.0, -(n*tile_size)/2, 1.0);
+	//modelMatrix = apply_model_mat * baseModelMatrix;
+	//meshLoaded = true;
 }
 
 //construct terrain using diamond square algorithm
 //INPUT:	coordinates of top left corner, and the width of the current square
 void DisplaceTerrain::construct(Vector2i p00, int width, float tHeight){
-
+	if(root != NULL){
+		root->clear();
+	}
 	float average;
-	DataPoint corners[] = { DataPoint(0,0,map[0][0]),	//NW
-						    DataPoint(n,0,map[0][n]),	//NE
-							DataPoint(0,n,map[n][0]),	//SW
-							DataPoint(n,n,map[n][n]) };	//SE
+	DataPoint corners[] = { DataPoint(0,0,height),	//NW
+						    DataPoint(n,0,height),	//NE
+							DataPoint(0,n,height),	//SW
+							DataPoint(n,n,height) };	//SE
 
-	root = new QuadTree(0, BoundingBox(corners, n+1));
+	root = new QuadTree(0, BoundingBox(corners, n));
+	//root->initCamPos(camPos);
+	root->initSelectionList(n*n);
 
-	root->insert(0, 0, map[0][0]);
-	root->insert(n, 0, map[0][n]);
-	root->insert(0, n, map[n][0]);
-	root->insert(n, n, map[n][n]);
+	//root->init();
+
+	//root->insert(0, 0, height);
+	//root->insert(n, 0, height);
+	//root->insert(0, n, height);
+	//root->insert(n, n, height);
 
 	for(;width > 1; width/=2, tHeight*=powf(2,-reduction)){
 		
@@ -490,6 +664,35 @@ void DisplaceTerrain::constructPerlin2D(){
 
 }
 
+void DisplaceTerrain::updateVertexArray(bool drawOutline){
+	updateQuadMesh(drawOutline);
+	superduper::updateVertexArray();
+}
+
+void DisplaceTerrain::updateCamProperties(Frustum &cam_view){
+	camView = cam_view;
+}
+
+float DisplaceTerrain::getPseudoRand(float max, float min){
+	if(!seedSet){
+		cout << "Error! Random seed not specified! Exiting.." << endl;
+		event_log << "Error! Random seed not specified! Exiting.." << endl;
+		exit(-1);
+	}
+	else {
+		//seed = logf(seed+1);
+		//seed++;
+	}
+	
+	float num = rand_height();
+
+	//event_log << "for seed " << seed << ": " << num << endl;
+
+	//float ans = fmod(rand(), max - min + 1) + min;
+
+	return num*max + (1-num)*min;
+}
+
 glm::vec3 DisplaceTerrain::getRandGradient(){
 	float x = getPseudoRand(1,-1);
 	float y = getPseudoRand(1,-1);
@@ -498,6 +701,23 @@ glm::vec3 DisplaceTerrain::getRandGradient(){
 	normalize(gradient);
 	return gradient;
 }
+
+int DisplaceTerrain::getNumTriangles(){
+	return root->getNumSelected()*2;
+}
+
+float DisplaceTerrain::getCenterDistance(){
+	//for(int i = 0; i < 4; i++){
+	//	glm::vec3 sample = root->getBox()[i].getVec3();
+	//	if((sample - camPos).length() < min_distance)
+	//		min_distance = (sample - camPos).length();
+	//}
+	glm::vec3 sample(n/2, root->getDataPointAt(n/2,n/2), n/2);
+	sample *= tile_size;
+	return length(sample - *camView.origin);
+}
+
+
 
 void DisplaceTerrain::print(){
 	for(int k = 0; k < n+1; k++){

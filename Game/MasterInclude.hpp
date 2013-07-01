@@ -25,8 +25,8 @@
 #include "MeshList.hpp"
 #include "Shader.hpp"
 #include "ShaderList.hpp"
-#include "DisplaceLine.hpp"
 #include "DisplaceTerrain.hpp"
+#include "BitmapFont.hpp"
 
 const string TextureDirectory = "../../../../../CODING/OpenGL/Textures/";
 const string MeshDirectory = "..//..//..//..//..//CODING//OpenGL//Meshes//Blender exports//";

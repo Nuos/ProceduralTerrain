@@ -307,14 +307,26 @@ void Mesh::updateVertexArray(){
 			glBindTexture(GL_TEXTURE_2D, 0);
 		}
 
-		if(vboList[i].dataType == VBO_VERTICES)
-			glBufferData(vboList[i].buffer_target, g_vert_count*3*sizeof(float),&g_vp[0],GL_STATIC_DRAW);
+		if(vboList[i].dataType == VBO_VERTICES){
+			if(g_vert_count == 0)
+				glBufferData(vboList[i].buffer_target, 0, 0,GL_STATIC_DRAW);
+			else
+				glBufferData(vboList[i].buffer_target, g_vert_count*3*sizeof(float),&g_vp[0],GL_STATIC_DRAW);
+		}
 
-		else if(vboList[i].dataType == VBO_TEXTURES)
-			glBufferData(vboList[i].buffer_target, g_vert_count*2*sizeof(float),&g_vt[0],GL_STATIC_DRAW);
+		else if(vboList[i].dataType == VBO_TEXTURES){
+			if(g_vert_count == 0)
+				glBufferData(vboList[i].buffer_target, 0, 0,GL_STATIC_DRAW);
+			else
+				glBufferData(vboList[i].buffer_target, g_vert_count*2*sizeof(float),&g_vt[0],GL_STATIC_DRAW);
+		}
 
-		else if(vboList[i].dataType == VBO_NORMALS)
-			glBufferData(vboList[i].buffer_target, g_vert_count*3*sizeof(float),&g_vn[0],GL_STATIC_DRAW);
+		else if(vboList[i].dataType == VBO_NORMALS){
+			if(g_vert_count == 0)
+				glBufferData(vboList[i].buffer_target, 0, 0,GL_STATIC_DRAW);
+			else
+				glBufferData(vboList[i].buffer_target, g_vert_count*3*sizeof(float),&g_vn[0],GL_STATIC_DRAW);
+		}
 
 		else if(vboList[i].dataType == VBO_INDEX){
 			glBufferData(GL_ELEMENT_ARRAY_BUFFER, g_vert_count*sizeof(GLubyte), g_vi.data(), GL_STATIC_DRAW);

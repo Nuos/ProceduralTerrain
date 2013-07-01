@@ -103,17 +103,19 @@ void updateFPS(){
 }
 
 int main(int argc, char *argv[]){
-	float window_width = 848,
-		window_height = 480;
-	RenderWindow window(VideoMode(window_width,window_height),"Shader demo",Style::Default,ContextSettings(32,0,0,3,3));
+	float window_width = 1280,
+		window_height = 800;
+	RenderWindow window(VideoMode(window_width,window_height),"Shader demo",Style::Fullscreen,ContextSettings(32,0,0,3,3));
 	Event event;
 	bool isRunning = true;
 	isProgramOK = true;
 
+	float startAngleX = -30.0f, startAngleY = 135.0f, startAngleZ = 0.0f;
+
 	float x = 0, y = 0, z = 0;
 	float deltaRed = 0.0, deltaGreen = 0.0, deltaBlue = 0.0;
 	float angle = 0.0, angleX = 0.0, angleY = 0.0, angleZ = 0.0;
-	float deltaAngleX = 0.0, deltaAngleY= 0.0, deltaAngleZ= 0.0;
+	float deltaAngleX = startAngleX, deltaAngleY = startAngleY, deltaAngleZ = startAngleZ;
 	float rightMouseX = 90.0f, rightMouseY = 0.0f;
 	Vector3<float> defaultOrigin;
 
@@ -161,15 +163,17 @@ int main(int argc, char *argv[]){
 	string rendererStr = "Renderer: ",
 		versionStr = "OpenGL version: ";
 	char rendererText[100], versionText[100];
+	
+	//FTGLBitmapFont *fpsFont = new FTGLBitmapFont("C:\\Windows\\Fonts\\verdana.ttf");
+	//if(fpsFont->Error()){
+	//	cout << "Error! Font could not load! Exiting.." << endl;
+	//	event_log << "Error! Font could not load! Exiting.." << endl;
+	//	return -1;
+	//}
+	int fontFaceSize = 12;
+	//fpsFont->FaceSize(fontFaceSize);
 
-	FTGLBitmapFont *fpsFont = new FTGLBitmapFont("C:\\Windows\\Fonts\\verdana.ttf");
-	if(fpsFont->Error()){
-		cout << "Error! Font could not load! Exiting.." << endl;
-		event_log << "Error! Font could not load! Exiting.." << endl;
-		return -1;
-	}
-	int fontFaceSize = 20;
-	fpsFont->FaceSize(fontFaceSize);
+	BitmapFont fpsFont("C:\\Windows\\Fonts\\verdana.ttf", fontFaceSize);
 
 	//fpsFont->Render("HELLO WORLD",-1,FTPoint(10.0,10.0,2.0),FTPoint(),FTGL::RENDER_FRONT | FTGL::RENDER_BACK);
 
@@ -185,19 +189,18 @@ int main(int argc, char *argv[]){
 	Camera *cam = Camera::getInstance();
 	cam->m_camera_type = cam->c_Flying;
 
-	defaultOrigin.x = 0, defaultOrigin.y = 50, defaultOrigin.z = 2;
+	defaultOrigin.x = -10, defaultOrigin.y = 20, defaultOrigin.z = -10;
 	cam->setCamOrigin(defaultOrigin.x, defaultOrigin.y, defaultOrigin.z);
-	cam->setTarget(0,0,0);
 	cam->setUpVec(0,1,0);
+	cam->setTarget(128,0,128);
 	cam->setOrtho(-0.4, 0.4, -0.3, 0.3, 0.01, 100.0);
-	cam->setPerspective(45*DEG2RAD,window_width/window_height,0.01,10000.0); //zNear cannot be zero
+	cam->setPerspective(45*DEG2RAD,window_width/window_height,0.1,10000.0); //zNear cannot be zero
 	cam->disableZRoll();									
 
 	cam->LookAt();
 	
 
-	//Light position
-	glm::vec3 lightOrigin(5.0, 5.0, 10.0);
+	
 
 	glm::mat4 translation = glm::mat4(1.0);
 
@@ -205,27 +208,28 @@ int main(int argc, char *argv[]){
 	bool firstKeyPress = true;
 
 
-	int t_n = 128;
-	float t_height = 20.0, t_reduction = 1.0, tile_size = 2.0;
+	int t_n = 256;
+	float t_height = 10.0, t_reduction = 1.0, tile_size = 2.0;
 
 	//srand(2);
 
 	//INPUT:	n, height, reduction (H), tile_size
 	int terrain_seed = 2314;
-	DisplaceTerrain terrain(t_n, t_height, t_reduction, tile_size);
+	DisplaceTerrain terrain(t_n, t_height, t_reduction, tile_size, cam);
 	terrain.setAmbientColor(0.2f);
 	terrain.setDiffuseColor(0.8f, 1.0f, 0.9f);
 	terrain.setSpecularColor(0.7f);
 	terrain.setSeed(terrain_seed);
-	terrain.loadTexture("../../../../../CODING/OpenGL/Textures/MarbleGreen.jpg", GL_TEXTURE_2D);
-	terrain.construct();
+	//terrain.loadTexture("../../../../../CODING/OpenGL/Textures/MarbleGreen.jpg", GL_TEXTURE_2D);
+	terrain.updateCamProperties(cam->getFrustum());
+	terrain.construct(false);
 	//terrain.constructPerlin2D();
 	bool firstTerrainCreated = true;
 
-	DisplaceTerrain ceiling(t_n, t_height, t_reduction, tile_size);
-	glm::mat4 trans = glm::mat4(1.0);
-	trans[3] = glm::vec4(0.0, 100.0, 0.0, 1.0);
-	eng::quat rotationz(glm::vec3(1.0f, 0.0f, 0.0f), 180.0);
+	//DisplaceTerrain ceiling(t_n, t_height, t_reduction, tile_size, cam->getCamOrigin());
+	//glm::mat4 trans = glm::mat4(1.0);
+	//trans[3] = glm::vec4(0.0, 100.0, 0.0, 1.0);
+	//eng::quat rotationz(glm::vec3(1.0f, 0.0f, 0.0f), 180.0);
 	//ceiling.applyModelMatrix(rotationz.getMatrix());
 	//ceiling.applyModelMatrix(trans);
 	//ceiling.setSeed(terrain_seed);
@@ -237,8 +241,10 @@ int main(int argc, char *argv[]){
 
 	glViewport(0, 0, window.getSize().x,window.getSize().y);
 
-	float mouseTicks = 0.0;
+	//Light position
+	glm::vec3 lightOrigin(tile_size*t_n/2, 5.0, tile_size*t_n/2);
 
+	float mouseTicks = 0.0;
 
 	float colors[] = {
 		1.0, 1.0, 1.0
@@ -368,7 +374,7 @@ int main(int argc, char *argv[]){
 		angleChanged = false, firstPress = true;
 	Vector2i mouseOrigin, mouseRightOrigin;
 	float rotateVarX = 0.0, rotateVarY = 0.0,
-		mouseTravelledY = 0.0, mouseTravelledX = 0.0,
+		mouseTravelledY = startAngleX, mouseTravelledX = startAngleY,
 		mouseRightTravelledY = 0.0, mouseRightTravelledX = 0.0;
 	Vector2<float> center_screen;
 
@@ -435,6 +441,8 @@ int main(int argc, char *argv[]){
 	glFrontFace(GL_CCW);
 
 	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+
+	glEnable(GL_LINE_SMOOTH);
 
 	enableVSync(1);
 
@@ -549,8 +557,9 @@ int main(int argc, char *argv[]){
 				else if(event.key.code == (Keyboard::Tab)){
 
 					if(firstTerrainCreated){
-						terrain.construct();
-						//ceiling.construct();
+						terrain.updateCamProperties(cam->getFrustum());
+						terrain.construct(false);
+						//ceiling.construct(false);
 						firstTerrainCreated = false;
 					}
 				}
@@ -572,7 +581,7 @@ int main(int argc, char *argv[]){
 					m_model[10] = 1.0;
 					angleX = 0.0, angleY = 0.0, angleZ = 0.0;
 					deltaAngleX = 0.0, deltaAngleY = 0.0, deltaAngleZ = 0.0;
-					cam->setCamOrigin(0,0,2);
+					cam->setCamOrigin(0,50,0);
 					cam->setTarget(0,0,0);
 					/*cam->lookAtVec.x = 0, cam->lookAtVec.y = 0, cam->lookAtVec.z = -2;*/
 					mouseTicks = 0.0;
@@ -630,28 +639,31 @@ int main(int argc, char *argv[]){
 					//cam->getTarget().x -=0.1;
 				}
 				else if(event.key.code == (Keyboard::Up)){
+					terrain.updateCamProperties(cam->getFrustum());
 					if(terrain_seed == 0)
 						terrain_seed++;
 					terrain_seed *= 2;
 					terrain.setSeed(terrain_seed);
-					terrain.construct(); 
+					terrain.construct(false); 
 					//ceiling.setSeed(terrain_seed);
-					//ceiling.construct();
+					//ceiling.construct(false);
 				}
 				else if(event.key.code == (Keyboard::Down)){
 					if(terrain_seed > 1){
+						terrain.updateCamProperties(cam->getFrustum());
 						terrain_seed /= 2;
 						terrain.setSeed(terrain_seed);
-						terrain.construct();
+						terrain.construct(false);
 						//ceiling.setSeed(terrain_seed);
-						//ceiling.construct();
+						//ceiling.construct(false);
 					}
 				}
 				else if(event.key.code == (Keyboard::Equal)){
 					if(firstTerrainCreated){
+						terrain.updateCamProperties(cam->getFrustum());
 						t_n*=2;
 						tile_size/=2;
-						terrain.construct(t_n, t_height, t_reduction, tile_size);
+						terrain.construct(t_n, t_height, t_reduction, tile_size, false);
 						//ceiling.construct(t_n, t_height, t_reduction, tile_size);
 						std::cout<<"n: "<<t_n<<"\t"
 							<<"height: "<<t_height<<"\t"
@@ -662,11 +674,12 @@ int main(int argc, char *argv[]){
 				}
 				else if(event.key.code == (Keyboard::Dash)){
 					if(firstTerrainCreated){
+						terrain.updateCamProperties(cam->getFrustum());
 						if(t_n > 1){
 							t_n/=2;
 							tile_size*=2;
 
-							terrain.construct(t_n, t_height, t_reduction, tile_size);
+							terrain.construct(t_n, t_height, t_reduction, tile_size, false);
 							//ceiling.construct(t_n, t_height, t_reduction, tile_size);
 							std::cout<<"n: "<<t_n<<"\t"
 								<<"height: "<<t_height<<"\t"
@@ -678,8 +691,9 @@ int main(int argc, char *argv[]){
 				}
 				else if(event.key.code == (Keyboard::PageUp)){
 					if(firstTerrainCreated){
+						terrain.updateCamProperties(cam->getFrustum());
 						t_height += 1.0;
-						terrain.construct(t_n, t_height, t_reduction, tile_size);
+						terrain.construct(t_n, t_height, t_reduction, tile_size, false);
 						//ceiling.construct(t_n, t_height, t_reduction, tile_size);
 						std::cout<<"n: "<<t_n<<"\t"
 							<<"height: "<<t_height<<"\t"
@@ -690,9 +704,10 @@ int main(int argc, char *argv[]){
 				}
 				else if(event.key.code == (Keyboard::PageDown)){
 					if(firstTerrainCreated){
+						terrain.updateCamProperties(cam->getFrustum());
 						if(t_height > 1.0){
 							t_height -= 1.0;
-							terrain.construct(t_n, t_height, t_reduction, tile_size);
+							terrain.construct(t_n, t_height, t_reduction, tile_size, false);
 							//ceiling.construct(t_n, t_height, t_reduction, tile_size);
 							std::cout<<"n: "<<t_n<<"\t"
 								<<"height: "<<t_height<<"\t"
@@ -704,14 +719,13 @@ int main(int argc, char *argv[]){
 				}
 				else if(event.key.code == (Keyboard::I)){
 					if(firstPress) {
-						//deltaAngleX = 80.0;
-						//deltaAngleY = 90.0;
+						//terrain.IncreaseDetail();
 						firstPress = false;
 					}
 				}
 				else if(event.key.code == (Keyboard::K)){
 					if(firstPress) {
-						//deltaAngleX += -80.0;
+						//terrain.DecreaseDetail();
 						firstPress = false;
 					}
 				}
@@ -763,17 +777,17 @@ int main(int argc, char *argv[]){
 		cam->updateCamera(deltaAngleX, deltaAngleY);
 
 		//rotate light around the place
-		lightOrigin.y = sinf(rightMouseX*DEG2RAD)*(t_n*tile_size/2 + 5.0) + 5.0;
-		lightOrigin.z = -cosf(rightMouseX*DEG2RAD)*(t_n*tile_size/2 + 5.0) + 5.0;
+		lightOrigin.y = sinf(rightMouseX*DEG2RAD)*(t_n*tile_size/2);
+		lightOrigin.z = -cosf(rightMouseX*DEG2RAD)*(t_n*tile_size/2) + tile_size*t_n/2;
 
 
 		//1.0f/(0.05*t_n*tile_size);
 		sun.setModelMatrix(
 			glm::scale(
-			glm::translate(glm::mat4(1.0), lightOrigin),
-			glm::vec3(t_n*tile_size*0.009375f)
+				glm::translate(glm::mat4(1.0), lightOrigin),
+				glm::vec3(t_n*tile_size*0.009375f)
 			)
-			);
+		);
 
 		//cout << lightOrigin.x << " " << lightOrigin.y << " " << lightOrigin.z << endl;
 
@@ -807,9 +821,17 @@ int main(int argc, char *argv[]){
 		//modelViewMat = glm::inverse(modelViewMat);
 		//modelViewMat = glm::transpose(modelViewMat);
 
+		//Update mesh LOD and vertex array
 		glUniformMatrix4fv(model_matrix_location, 1, GL_FALSE, terrain.getModelMatrix());
-		terrain.updateVertexArray();
-		glDrawArrays(GL_TRIANGLES, 0, terrain.getNumVertices());
+		//terrain.setDiffuseColor(0.8f, 1.0f, 0.9f);
+		terrain.updateCamProperties(cam->getFrustum());
+		terrain.updateVertexArray(false);
+		glDrawArrays(GL_TRIANGLES, 0, terrain.getNumTriangles()*3);
+		//terrain.setAsLightSource();
+		//terrain.setDiffuseColor(0.4f);
+		//terrain.updateVertexArray(cam->getCamOrigin(), true);
+		//glDrawArrays(GL_LINES, 0, terrain.getNumTriangles()*7);
+		//terrain.unsetLightSource();
 
 		//glUniformMatrix4fv(model_matrix_location, 1, GL_FALSE, ceiling.getModelMatrix());
 		//ceiling.updateVertexArray();
@@ -825,32 +847,15 @@ int main(int argc, char *argv[]){
 
 
 		updateFPS();
-		char *fpsName = new char[10],
-			 *nName = new char[5],
-			 *heightName = new char[10],
-			 *camX = new char[10], *camY = new char[10], *camZ = new char[10];
-		itoa(fpsCount,fpsName,10);
-		itoa(t_n,nName,10);
-		itoa(t_height,heightName,10);
-		itoa(cam->getCamOrigin().x, camX, 10);
-		itoa(cam->getCamOrigin().y, camY, 10);
-		itoa(cam->getCamOrigin().z, camZ, 10);
-		string fpsText("FPS: "),
-			   nText("n = "),
-			   heightText("Avg. height = "),
-			   camXstr("Cam X: "), camYstr(" Y: "), camZstr(" Z: ");
-		fpsText.append(fpsName);
-		nText.append(nName);
-		heightText.append(heightName);
-		camXstr.append(camX), camYstr.append(camY), camZstr.append(camZ);
-		camXstr.append(camYstr);
-		camXstr.append(camZstr);
-		fpsFont->Render(fpsText.c_str(),-1,FTPoint(10.0,window.getSize().y-fontFaceSize),FTPoint(),FTGL::RENDER_FRONT | FTGL::RENDER_BACK);
-		fpsFont->Render(nText.c_str(),-1,FTPoint(10.0,window.getSize().y-fontFaceSize*2),FTPoint(),FTGL::RENDER_FRONT | FTGL::RENDER_BACK);
-		fpsFont->Render(heightText.c_str(),-1,FTPoint(10.0,window.getSize().y-fontFaceSize*3),FTPoint(),FTGL::RENDER_FRONT | FTGL::RENDER_BACK);
-		fpsFont->Render(camXstr.c_str(), -1, FTPoint(10.0,window.getSize().y-fontFaceSize*4), FTPoint(), FTGL::RENDER_FRONT | FTGL::RENDER_BACK);
-		delete fpsName, nName, heightName, camX, camY, camZ;
-
+		fpsFont.renderText(50, 10.0, window.getSize().y-fontFaceSize, "FPS: %d", fpsCount);
+		fpsFont.renderText(50, 10.0, window.getSize().y-fontFaceSize*2, "n = %d", t_n);
+		fpsFont.renderText(50, 10.0, window.getSize().y-fontFaceSize*3, "height = %.0f", t_height);
+		fpsFont.renderText(100, 10.0, window.getSize().y-fontFaceSize*4, "Cam X: %.2f  Cam Y: %.2f  Cam Z: %.2f", 
+			cam->getCamOrigin().x, cam->getCamOrigin().y, cam->getCamOrigin().z);
+		fpsFont.renderText(100, 10.0, window.getSize().y-fontFaceSize*5, "Lookat X: %.2f  Lookat Y: %.2f  Lookat Z: %.2f", 
+			cam->getTarget().x, cam->getTarget().y, cam->getTarget().z);
+		fpsFont.renderText(50, 10.0, window.getSize().y-fontFaceSize*6, "Triangles rendered: %d", terrain.getNumTriangles());
+		fpsFont.renderText(50, 10.0, window.getSize().y-fontFaceSize*7, "Min. Distance: %.2f", terrain.getCenterDistance());
 
 		window.display();
 		frameCount++;
@@ -864,6 +869,6 @@ int main(int argc, char *argv[]){
 		<< "=====================================\n"<< endl;
 	event_log.close();
 
-	delete fpsFont;
+	//delete fpsFont;
 	return 0;
 }

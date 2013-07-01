@@ -2,10 +2,26 @@
 #include "event_logger.h"
 #include <iostream>
 
+int QuadTree::totalNodes = 0;
+int QuadTree::nodeCount = 0;
+int QuadTree::MAX_DEPTH = -1;
+
+std::vector<QuadTree*> QuadTree::selected;
+
+float QuadTree::min_distance = 99999;
+
+//gets the exponent of a power-of-2 number
+//int logBase2(int num);
+
 QuadTree::QuadTree(int level, BoundingBox box) 
-	: data(), level(level), has_children(false), has_data(false), 
-	box(box), n(box.width), state(NODE_UNSELECTED) {
-	
+	: level(level), has_children(false), has_data(false), 
+	box(box), n(box.width), LOD_level(0) {
+		if(level == 0) {
+			MAX_DEPTH = logBase2(n);
+			LOD_level = MAX_DEPTH - 1;
+		}
+		else
+			LOD_level = MAX_DEPTH - level - 1;
 }
 
 //copy constructor
@@ -24,23 +40,44 @@ QuadTree& QuadTree::operator=(const QuadTree& other){
 	has_data = other.has_data;
 	has_children = other.has_children;
 	n = other.n;
+	LOD_level = other.LOD_level;
+	//cam_pos = other.cam_pos;
 	return *this;
 }
 
 QuadTree::~QuadTree(){
-	for(int i = 0; i < 4; i++){
-		delete nodes[i];
-	}
+	clear();
+}
+
+//initialize the QuadTree 
+void QuadTree::initCamPos(glm::vec3 camPos){
+	//for(int i = 0; i < box.width; i++){
+	//	for(int j = 0; j < box.height; j++){
+	//		if((i == 0 && j == 0)	||	 (i == 0 && j == box.height) ||
+	//			(i == box.width && j == 0)	|| (i == box.width && j == box.height)) {
+	//				continue;
+	//		}
+	//			insert(i, j, 0);
+	//	}
+	//}
+	//
+	//cam_pos = camPos;
+}
+
+void QuadTree::initSelectionList(int listSize){
+	if(selected.size() != listSize)
+		selected.resize(listSize);
+	//selected[0] = this;
+	nodeCount = 0;
 }
 
 //Clears current node and all child nodes
 void QuadTree::clear(){
-	//data.resize(0);
-	
 	if(has_children){
 		for(int i = 0; i < 4; i++){
 			nodes[i]->clear();
 		}
+		delete[] nodes;
 	}
 }
 
@@ -59,41 +96,39 @@ void QuadTree::clear(){
 //INPUT:	DataPoint value, 
 //			Bounding box representing the region
 //			of the current node
-void QuadTree::insert(int x, int y, float value){
-
-	//if(x < 0 || y < 0
-	//	|| x > box.width || y > box.height){
-	//		
-	//}
-
+void QuadTree::insert(int x, int z, float value){
 	//if level < MAX_DEPTH, recurse to children
-	if(level < MAX_DEPTH-1) {
-		split();
-		if(nodes[NW]->contains(x, y))
-			nodes[NW]->insert(x, y, value);
-
-		else if(nodes[NE]->contains(x, y))
-			nodes[NE]->insert(x, y, value);
-
-		else if(nodes[SW]->contains(x, y))
-			nodes[SW]->insert(x, y, value);
-
-		else if(nodes[SE]->contains(x, y))
-			nodes[SE]->insert(x, y, value);
-		else {
-			std::cout << "QuadTree: error! Value inserted outside of bounds" << std::endl;
-			event_log << "QuadTree: error! Value inserted outside of bounds" << std::endl;
-			system("pause");
-			exit(-1);
+	if(level < MAX_DEPTH) {
+		if(containsInCorners(x,z)){
+			for(int i = 0; i < 4; i++){
+				if(box[i].x == x && box[i].z == z){
+					box[i].value = value;
+					QuadTree::totalNodes++;
+					break;
+				}
+			}
 		}
-
+		else if(contains(x,z)){
+			split();
+			for(int j = 0; j < 4; j++){
+				nodes[j]->insert(x, z, value);
+			}
+		}
+		else {
+			//std::cout << "QuadTree: error! Value inserted outside of bounds" << std::endl;
+			//event_log << "QuadTree: error! Value inserted outside of bounds" << std::endl;
+			//system("pause");
+			//exit(-1);
+			return;
+		}
+		
 	}
 	else {
-		//level has reached MAX_DEPTH
-
 		for(int i = 0; i < 4; i++){
-			if(box[i].x == x && box[i].y == y){
+			if(box[i].x == x && box[i].z == z){
 				box[i].value = value;
+				QuadTree::totalNodes++;
+				return;
 			}
 		}
 	}
@@ -108,13 +143,13 @@ void QuadTree::split(){
 		//Define top-left corners of the quadrants
 		DataPoint	topleftCorners[] = 
 		{	
-			DataPoint(box[NW].x, box[NW].y, 0),					//NW corner
-			DataPoint((box[NW].x + box.width/2)%box.width,		//NE corner
-						box[NW].y, 0), 
+			DataPoint(box[NW].x, box[NW].z, -7777),					//NW corner
+			DataPoint((box[NW].x + box.width/2),		//NE corner
+						box[NW].z, -7777), 
 			DataPoint(box[NW].x,								//SW corner
-					   (box[NW].y + box.height/2)%box.height, 0), 
-			DataPoint((box[NW].x + box.width/2)%box.width,		//SE corner
-					   (box[NW].y + box.height/2)%box.height, 0) 
+					   (box[NW].z + box.height/2), -7777), 
+			DataPoint((box[NW].x + box.width/2),		//SE corner
+					   (box[NW].z + box.height/2), -7777) 
 		};
 
 		//create 4 sub nodes
@@ -124,14 +159,33 @@ void QuadTree::split(){
 			nodes[j]->box[NW] = topleftCorners[j];
 
 			nodes[j]->box[NE].x = topleftCorners[j].x + box.width/2;
-			nodes[j]->box[NE].y = topleftCorners[j].y;
+			nodes[j]->box[NE].z = topleftCorners[j].z;
 
 			nodes[j]->box[SW].x = topleftCorners[j].x;
-			nodes[j]->box[SW].y = topleftCorners[j].y + box.height/2;
+			nodes[j]->box[SW].z = topleftCorners[j].z + box.height/2;
 
 			nodes[j]->box[SE].x = topleftCorners[j].x + box.width/2;
-			nodes[j]->box[SE].y = topleftCorners[j].y + box.height/2;
-			nodes[j]->n = n/2;
+			nodes[j]->box[SE].z = topleftCorners[j].z + box.height/2;
+			//nodes[j]->n = n/2;
+			//nodes[j]->box.width = box.width/2;
+			//nodes[j]->box.height = box.height/2;
+
+			//copy corner values of current node to one of the corners 
+			//of each child node
+			switch(j){
+			case NW:
+				nodes[j]->box[NW].value = box[NW].value;
+				break;
+			case NE:
+				nodes[j]->box[NE].value = box[NE].value;
+				break;
+			case SW:
+				nodes[j]->box[SW].value = box[SW].value;
+				break;
+			case SE:
+				nodes[j]->box[SE].value = box[SE].value;
+				break;
+			}
 		}
 
 
@@ -139,31 +193,92 @@ void QuadTree::split(){
 	}
 }
 
-//Select nodes that satisfy a certain condition
-//INPUT:	float distance
-QuadTree QuadTree::select(float distance){
+//*******************************
+//TODO:	Selection Algorithm
+//	Select nodes based on how far away they are
+//	from the viewer. Dynamically render more nodes at
+//	close distances to the viewer, and less nodes at
+//	further distances 
+//	ALSO, must keep a relatively constant number of
+//	triangles on screen at any time
+//*******************************
 
-	//every node that is less than or equal to this distance is selected
-	if(level < MAX_DEPTH){
+//Starting at LODmin (the highest LOD level), recursively select nodes 
+//that are within range of the specified lodLevel
+//INPUT:	float:	array of LOD range values to check against
+//			int:	the LOD level to start at 
+bool QuadTree::select(float *lodRanges, int lodLevel, glm::vec3 cam_pos, Frustum &cam_view){
+	//if(nodeCount > 500)
+	//	return false;
 
+	//frustrum check
+	if(!box.withinFrustum(cam_view)){
+		//if(nodeCount == 0) selected[0] = this;
+		return false;
 	}
-	else if(has_data) {
-		state = NODE_SELECTED;
+
+	//check if node is not entirely in range
+	if(!box.withinRange(cam_pos, lodRanges[lodLevel], min_distance)){
+
+		//if the node bounding box is not entirely in range of LOD level, return false
+		return false;
+	}
+
+	//if this node is at LODmax and completely in range, add to selected list
+	if(lodLevel == 0) {
+		selected[nodeCount++] = this;
 	}
 	else {
-		std::cout << "Error! Node has no data" << std::endl;
+		//if this is not LODmax, check if its eligible for more detailed LOD level
+		//if bounding box is partially or not at all within range, add current node
+		if(!box.withinRange(cam_pos, lodRanges[lodLevel-1], min_distance)){
+			selected[nodeCount++] = this;
+		}
+		else {
+			//bounding box is fully within range of lower LOD level
+			//check each child node
+			for(int k = 0; k < 4; k++){
+
+				//
+				if(!nodes[k]->select(lodRanges, lodLevel-1, cam_pos, cam_view)){
+					selected[nodeCount++] = this;
+				}
+			}
+		
+		}
+	
 	}
-	return *this;
+
+
+	nodeCount = nodeCount%selected.size();
+
+	return true;
 }
 
 //Returns TRUE if the current node or its children contain pt
 //	FALSE otherwise
-bool QuadTree::contains(int x, int y){
-	return (x >= box[NW].x || 
-			y >= box[NW].y || 
-			x < box.width || 
-			y < box.height);
+bool QuadTree::contains(int x, int z){
+	return (x >= box[NW].x  &&  z >= box[NW].z  &&  
+			x <= (box[NW].x + box.width)  &&  
+			z <= (box[NW].z + box.height));
 }
+
+bool QuadTree::containsInCorners(int x, int z){
+	if( (box[NW].x == x && box[NW].z == z) ||
+		(box[NW].x + box.width == x && box[NW].z == z) ||
+		(box[NW].x == x && box[NW].z + box.height == z) ||
+		(box[NW].x + box.width == x && box[NW].z + box.height == z))
+		return true;
+	else
+		return false;
+}
+
+//Renders the currently selected list of nodes
+//OUTPUT:	Returns true if successfully rendered,
+//			false otherwise
+//bool QuadTree::render(){
+//
+//}
 
 bool QuadTree::HasChildren(){
 	return has_children;
@@ -175,10 +290,86 @@ bool QuadTree::HasData(){
 
 //	GET Methods
 
-float QuadTree::getDataPointAt(int x, int y){
-	return 0;
+float QuadTree::getDataPointAt(int x, int z){
+	//Recurse to the lowest level node
+	if(level < MAX_DEPTH) {
+		if(containsInCorners(x,z)) {
+			for(int i = 0; i < 4; i++){
+				if(box[i].x == x && box[i].z == z){
+					return box[i].value;
+				}
+			}
+		}
+		else if(contains(x,z)) {
+			for(int t = 0; t < 4; t++){
+				if(nodes[t]->contains(x,z))
+					return nodes[t]->getDataPointAt(x, z);
+			}
+		}
+		else {
+			std::cout << "QuadTree: Error! No value exists at point (" 
+				<< x << ", " << z << ")" << std::endl;
+			event_log << "QuadTree: Error! No value exists at point (" 
+				<< x << ", " << z << ")" << std::endl;
+			system("pause");
+			exit(-1);
+		}
+	}
+	//Reached the lowest level node (LOD max)
+	else {
+		for(int j = 0; j < 4; j++) {
+			if(box[j].x == x && box[j].z == z)
+				return box[j].value;
+		}
+		std::cout << "QuadTree: Error inputting value at (" 
+			<< x << ", " << z << ")\n" 
+			"Check that MAX_DEPTH corresponds to n"<< std::endl;
+		event_log << "QuadTree: Error inputting value at (" 
+			<< x << ", " << z << ")\n" 
+			"Check that MAX_DEPTH corresponds to n"<< std::endl;
+		system("pause");
+		exit(-1);
+	}
 }
 
+//BoundingBox QuadTree::getNodeAt(int LODLevel, int x, int z){
+//	if()
+//}
+
+//returns the number of SELECTED nodes
 int QuadTree::getNumSelected(){
-	return num_selected;
+	return nodeCount;
+}
+
+//returns the total number of nodes in this QuadTree
+int QuadTree::getTotalNodes(){
+	return totalNodes;
+}
+
+QuadTree **QuadTree::getSelectedNodes(){
+	return selected.data();
+}
+
+BoundingBox &QuadTree::getBox(){
+	return box;
+}
+
+//returns this node's LOD level
+int QuadTree::getLOD(){
+	return LOD_level;
+}
+
+//incomplete. Fix or remove.
+float QuadTree::getMinDistance(){
+	return min_distance;
+}
+
+//gets the exponent of a power-of-2 number
+int logBase2(int num){
+	int count = 0;
+	while(num > 1){
+		num = num/2;
+		count++;
+	}
+	return count;
 }

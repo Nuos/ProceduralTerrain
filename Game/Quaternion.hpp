@@ -1,7 +1,7 @@
 #ifndef __QUATERNION_TOOL_H_
 #define __QUATERNION_TOOL_H_
 #define ROUNDING_TOLERANCE 0.00001f
-#define RAD2DEG (180/PI)
+//#define RAD2DEG (180/PI)
 #include <math.h>
 
 namespace eng {

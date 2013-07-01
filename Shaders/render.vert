@@ -19,6 +19,7 @@ out vec3 vert_position_eye;
 out vec2 tex_coords;
 out vec3 lightPos;
 
+
 void main(){
 
 	/*diffuse lighting*/

@@ -1,6 +1,3 @@
-#define PI 3.1415
-#define DEG2RAD (PI/180)
-#define RAD2DEG (180/PI)
 #include "Camera.hpp"
 #include <SFML/Graphics.hpp>
 #include <GL/glew.h>
@@ -59,8 +56,8 @@ void Camera::initCamera(){
 	isPerspective = false;
 	this->m_camera_type = c_FirstPerson;
 	thirdPersonZoom = 0;
-	orthoBox = new ProjBox;
-	persBox = new ProjBox;
+	orthoBox = new Frustum();
+	persBox = new Frustum();
 	mat_View = glm::mat4(1.0);
 	mat_Proj = glm::mat4(1.0);
 	mat_rotX = glm::mat4(1.0);
@@ -134,9 +131,9 @@ void Camera::LookAt()
 	//	0,      0,      1,     0,    //third column
 	//	-eye.x, -eye.y, -eye.z,  1   //fourth column
 	//}
-	m_T[3][0] = -m_target.x;
-	m_T[3][1] = -m_target.y;
-	m_T[3][2] = -m_target.z;
+	m_T[3][0] = -m_camOrigin.x;
+	m_T[3][1] = -m_camOrigin.y;
+	m_T[3][2] = -m_camOrigin.z;
 
 	//View matrix
 	//{
@@ -147,41 +144,43 @@ void Camera::LookAt()
 	mat_View = m_R * m_T;
 
 	m_pitch = asinf(mat_View[1][2]);
-	orientation.buildFromMatrix(mat_View);
+	//orientation.buildFromMatrix(mat_View);
 
 	mat_Proj = glm::mat4(1.0);
 
 	if(isPerspective){
 		mat_Proj[0][0] = (2 * persBox->zNear) / 
-			(persBox->range * persBox->aspect + persBox->range * persBox->aspect);
-		mat_Proj[1][1] = persBox->zNear/persBox->range;
+			(persBox->yNear * persBox->aspect + persBox->yNear * persBox->aspect);
+		mat_Proj[1][1] = persBox->zNear/persBox->yNear;
 		mat_Proj[2][2] = -(persBox->zFar + persBox->zNear) / (persBox->zFar - persBox->zNear);
 		mat_Proj[2][3] = -1;
 		mat_Proj[3][2] = -(2 * persBox->zFar * persBox->zNear) / (persBox->zFar - persBox->zNear);
 		mat_Proj[3][3] = 0;
+		persBox->init = true;
 	} else {
-		mat_Proj[0][0] = 2 / (orthoBox->right - orthoBox->left);
-		mat_Proj[1][1] = 2 / (orthoBox->top - orthoBox->bottom);
-		mat_Proj[2][2] = -2 / (orthoBox->zFar - orthoBox->zNear);
-		mat_Proj[3][0] = -(orthoBox->right + orthoBox->left) / (orthoBox->right - orthoBox->left);
-		mat_Proj[3][1] = -(orthoBox->top + orthoBox->bottom) / (orthoBox->top - orthoBox->bottom);
-		mat_Proj[3][2] = -(orthoBox->zFar + orthoBox->zNear) / (orthoBox->zFar - orthoBox->zNear);
-		mat_Proj[3][3] = 1;
+		//mat_Proj[0][0] = 2 / (orthoBox->right - orthoBox->left);
+		//mat_Proj[1][1] = 2 / (orthoBox->top - orthoBox->bottom);
+		//mat_Proj[2][2] = -2 / (orthoBox->zFar - orthoBox->zNear);
+		//mat_Proj[3][0] = -(orthoBox->right + orthoBox->left) / (orthoBox->right - orthoBox->left);
+		//mat_Proj[3][1] = -(orthoBox->top + orthoBox->bottom) / (orthoBox->top - orthoBox->bottom);
+		//mat_Proj[3][2] = -(orthoBox->zFar + orthoBox->zNear) / (orthoBox->zFar - orthoBox->zNear);
+		//mat_Proj[3][3] = 1;
+		//orthoBox->init = true;
 	}
-	updateViewMatrix();
+	//updateViewMatrix();
 }
 
 void Camera::updateViewMatrix(){
 	mat_View = orientation.getMatrix();
 	orientation = eng::quat(0,0,0,1);
-	lookAtVec = glm::vec3(mat_View[0][2], mat_View[1][2], mat_View[2][2]);
-	m_dir = -lookAtVec;
+	lookAtVec = -glm::vec3(mat_View[0][2], mat_View[1][2], mat_View[2][2]);
+	m_dir = lookAtVec;
 	rightVec = glm::vec3(mat_View[0][0], mat_View[1][0], mat_View[2][0]);
 	upVec = glm::vec3(mat_View[0][1], mat_View[1][1], mat_View[2][1]);
 
 	mat_View[3][0] = -glm::dot(rightVec, m_camOrigin);
 	mat_View[3][1] = -glm::dot(upVec, m_camOrigin);
-	mat_View[3][2] = -glm::dot(lookAtVec, m_camOrigin);
+	mat_View[3][2] = -glm::dot(-lookAtVec, m_camOrigin);
 }
 
 void Camera::updateCamera(float angleX, float angleY){
@@ -206,6 +205,7 @@ void Camera::updateCamera(float angleX, float angleY){
 void Camera::updateRightVec(){
 	rightVec = crossProduct(lookAtVec, upVec);
 }
+
 
 //angle in degrees
 //rotate about axis according to Left Hand Rule
@@ -270,6 +270,8 @@ void Camera::setTarget(float lookAtX, float lookAtY, float lookAtZ){
 	this->m_target.x = lookAtX;
 	this->m_target.y = lookAtY;
 	this->m_target.z = lookAtZ;
+	//lookAtVec = m_target - m_camOrigin;
+	//LookAt();
 }
 
 void Camera::setCamOrigin(float camX, float camY, float camZ){
@@ -306,7 +308,11 @@ void Camera::setPerspective(float fovy, float aspect, float zNear, float zFar){
 	persBox->aspect = aspect;
 	persBox->zNear = zNear;
 	persBox->zFar = zFar;
-	persBox->range = tanf(fovy/2)*zNear;
+	persBox->origin = &m_camOrigin;
+	persBox->forwardVec = &lookAtVec;
+	persBox->upVec = &upVec;
+	persBox->rightVec = &rightVec;
+	persBox->updateFrustum();
 	isPerspective = true;
 }
 
@@ -316,13 +322,13 @@ void Camera::setOrtho(){
 void Camera::setOrtho(float left, float right, 
 							float bottom, float top,
 							float zNear, float zFar){
-	orthoBox->left = left;
-	orthoBox->right = right;
-	orthoBox->bottom = bottom;
-	orthoBox->top = top;
-	orthoBox->zNear = zNear;
-	orthoBox->zFar = zFar;
-	isPerspective = false;
+	//orthoBox->left = left;
+	//orthoBox->right = right;
+	//orthoBox->bottom = bottom;
+	//orthoBox->top = top;
+	//orthoBox->zNear = zNear;
+	//orthoBox->zFar = zFar;
+	//isPerspective = false;
 }
 
 void Camera::setZoom(float zoom_distance){
@@ -338,7 +344,7 @@ int Camera::checkInits(){
 // Get Functions
 //************************************************
 glm::vec3 Camera::getTarget(){
-	return m_target;
+	return -lookAtVec;
 }
 glm::vec3 Camera::getCamOrigin(){
 	return this->m_camOrigin;
@@ -367,11 +373,51 @@ glm::mat4 Camera::getProjMat4(){
 glm::mat4 Camera::getCamTransformMatrix(){
 	return mat_View._inverse();
 }
+glm::vec3 Camera::getEyeSpacePos(){
+	return glm::vec3(mat_View * glm::vec4(m_camOrigin, 1.0));
+}
+
+Frustum Camera::getFrustum(){
+	if(isPerspective){
+		persBox->updateFrustum();
+		return *persBox;
+	}
+	else {
+		orthoBox->updateFrustum();
+		return *orthoBox;
+	}
+}
+
+
+
+//Normalizes a vector
+//INPUT:	a reference to a glm::vec3-type object
+void normalize(glm::vec3 &vector){
+	float m = sqrtf((vector.x * vector.x) 
+				+ (vector.y * vector.y)
+				+ (vector.z * vector.z));
+	vector.x /= m;
+	vector.y /= m;
+	vector.z /= m;
+}
+
+glm::vec3 getNormalized(glm::vec3 vector){
+	normalize(vector);
+	return vector;
+}
+
+//Dot product of 2 vectors
+//INPUT:	Two references to SFML glm::vec3-type objects
+//OUTPUT:	floating point answer
+float dot(glm::vec3 &a, glm::vec3 &b)
+{
+    return (a.x * b.x) + (a.y * b.y) + (a.z * b.z);
+}
 
 //Cross product of 2 vectors
 //INPUT:	takes floats of 2 vectors and calculates cross product
 //OUTPUT:	SFML glm::vec3 object
-glm::vec3 Camera::crossProduct(float ax,float ay, float az, float bx, float by, float bz){
+glm::vec3 crossProduct(float ax,float ay, float az, float bx, float by, float bz){
 	glm::vec3 ans;
 	ans.x = ay*bz - az*by;
 	ans.y = az*bx - ax*bz;
@@ -382,7 +428,7 @@ glm::vec3 Camera::crossProduct(float ax,float ay, float az, float bx, float by, 
 //Cross product of 2 vectors
 //INPUT:	Takes 2 SFML Vector3 objects
 //OUTPUT:	SFML glm::vec3 object
-glm::vec3 Camera::crossProduct(glm::vec3 a, glm::vec3 b){
+glm::vec3 crossProduct(glm::vec3 a, glm::vec3 b){
 	glm::vec3 ans;
 	ans.x = a.y*b.z - a.z*b.y;
 	ans.y = a.z*b.x - a.x*b.z;
@@ -390,28 +436,9 @@ glm::vec3 Camera::crossProduct(glm::vec3 a, glm::vec3 b){
 	return ans;
 }
 
-//Normalizes a vector
-//INPUT:	a reference to a glm::vec3-type object
-void Camera::normalize(glm::vec3 &vector){
-	float m = sqrtf((vector.x * vector.x) 
-				+ (vector.y * vector.y)
-				+ (vector.z * vector.z));
-	vector.x /= m;
-	vector.y /= m;
-	vector.z /= m;
-}
-
-//Dot product of 2 vectors
-//INPUT:	Two references to SFML glm::vec3-type objects
-//OUTPUT:	floating point answer
-float Camera::dot(glm::vec3 &a, glm::vec3 &b)
-{
-    return (a.x * b.x) + (a.y * b.y) + (a.z * b.z);
-}
-
 //Magnitude of a vector
 //INPUT:	A Vector
 //OUTPUT:	Magnitude of Vector as a float
-float Camera::magnitude(glm::vec3 &vector){
+float magnitude(glm::vec3 &vector){
 	return sqrtf(vector.x*vector.x + vector.y*vector.y + vector.z*vector.z);
 }

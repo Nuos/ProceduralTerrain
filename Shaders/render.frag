@@ -10,6 +10,7 @@ uniform mat4 modelMat;
 uniform mat4 viewMat;
 uniform vec3 camOrigin;
 uniform sampler2D m_texture;
+uniform vec3 solidColour;
 
 
 uniform MaterialProperties {
