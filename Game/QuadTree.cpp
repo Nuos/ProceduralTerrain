@@ -208,7 +208,7 @@ void QuadTree::split(){
 //INPUT:	float:	array of LOD range values to check against
 //			int:	the LOD level to start at 
 bool QuadTree::select(float *lodRanges, int lodLevel, glm::vec3 cam_pos, Frustum &cam_view){
-	//if(nodeCount > 500)
+	//if(lodLevel < 6)
 	//	return false;
 
 	//frustrum check
@@ -241,7 +241,7 @@ bool QuadTree::select(float *lodRanges, int lodLevel, glm::vec3 cam_pos, Frustum
 
 				//
 				if(!nodes[k]->select(lodRanges, lodLevel-1, cam_pos, cam_view)){
-					selected[nodeCount++] = this;
+					selected[nodeCount++] = nodes[k];
 				}
 			}
 		

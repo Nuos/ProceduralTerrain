@@ -138,12 +138,6 @@ public:
 /*
 	QUADTREE class
 
-	Description: 
-		A Quad Tree holds MAX_POINTS floating point values per node.
-		If any node contains more than MAX_POINTS values, that node is 
-		split into 4 child nodes.
-
-		For an adaptive quadtree, MAX_POINTS is set to 0
 */
 
 class QuadTree {

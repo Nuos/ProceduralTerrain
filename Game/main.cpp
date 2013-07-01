@@ -829,8 +829,8 @@ int main(int argc, char *argv[]){
 		glDrawArrays(GL_TRIANGLES, 0, terrain.getNumTriangles()*3);
 		//terrain.setAsLightSource();
 		//terrain.setDiffuseColor(0.4f);
-		//terrain.updateVertexArray(cam->getCamOrigin(), true);
-		//glDrawArrays(GL_LINES, 0, terrain.getNumTriangles()*7);
+		//terrain.updateVertexArray(true);
+		//glDrawArrays(GL_LINES, 0, terrain.getNumTriangles()*8);
 		//terrain.unsetLightSource();
 
 		//glUniformMatrix4fv(model_matrix_location, 1, GL_FALSE, ceiling.getModelMatrix());
