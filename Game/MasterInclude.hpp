@@ -6,8 +6,6 @@
 #include <SFML\Graphics.hpp>
 #include <SFML\Window\Event.hpp>
 #include <GL/glew.h>
-//#include <GL/glext.h>
-//#include <GL/freeglut.h>
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
@@ -24,7 +22,7 @@
 #include "Camera.hpp"
 #include "MeshList.hpp"
 #include "Shader.hpp"
-#include "ShaderList.hpp"
+#include "ShaderProgram.hpp"
 #include "DisplaceTerrain.hpp"
 #include "BitmapFont.hpp"
 

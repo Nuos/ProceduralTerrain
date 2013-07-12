@@ -2,7 +2,7 @@
 #include <vector>
 
 
-namespace CustomShader{
+namespace shm {
 
 
 	//****************************
@@ -10,22 +10,27 @@ namespace CustomShader{
 	//****************************
 
 	//Constructor
-	Shader::Shader(){
-		typeInit = false;
-		shaderLoaded = false;
-	}
+	Shader::Shader() : typeInit(false), shaderLoaded(false) {}
 
 	//Constructor
 	//INPUT:	Shader type
 	//			e.g. GL_VERTEX_SHADER, GL_FRAGMENT_SHADER
-	Shader::Shader(GLenum type){
-		this->type = type;
-		typeInit = true;
-		shaderLoaded = false;
+	Shader::Shader(GLenum type) : type(type), typeInit(true), shaderLoaded(false){}
+
+	Shader::Shader(const Shader& other){
+		*this = other;
 	}
 
-	Shader::~Shader(){
+	Shader& Shader::operator=(const Shader& other){
+		type = other.type;
+		typeInit = other.typeInit;
+		shaderLoaded = other.shaderLoaded;
+		handle = other.handle;
+		shaderStr = other.shaderStr;
+		return *this;
 	}
+
+	Shader::~Shader(){}
 
 
 	//**************************
@@ -38,6 +43,7 @@ namespace CustomShader{
 	//			otherwise returns true
 	bool Shader::loadFile(const char *fileName){
 		ifstream input;
+		char buffer[512];
 
 		cout << "Loading shader: " << fileName << endl;
 		event_log << "Loading shader: "<< fileName << endl;
@@ -65,6 +71,7 @@ namespace CustomShader{
 	//OUTPUT:	returns false if shader not loaded, or shader type is 
 	//				not defined
 	bool Shader::compileShader(){
+		const char * str;
 		try {
 			if(typeInit){
 				handle = glCreateShader(type);
@@ -124,6 +131,10 @@ namespace CustomShader{
 		return this->handle;
 	}
 
+	GLenum Shader::getType(){
+		return type;
+	}
+
 
 	//************************
 	//		Error Checking
@@ -137,6 +148,8 @@ namespace CustomShader{
 			glGetShaderiv(shader_index,GL_COMPILE_STATUS, &params);
 			if (GL_TRUE != params) {
 				throw params;
+			} else {
+				printShaderInfoLog(shader_index);
 			}
 		} 
 		catch (GLint e){

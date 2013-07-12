@@ -14,6 +14,14 @@ layout(std140) uniform LUT {
 	ivec3 edge_connect_list[1280];
 };
 
+uniform MaterialProperties {
+	uniform vec3 Ka;
+	uniform vec3 Kd;
+	uniform vec3 Ks;
+	uniform float isLightSource;
+	uniform float hasTexture;
+};
+
 out vec3 vert_normal_eye;
 out vec3 vert_position_eye;
 out vec2 tex_coords;
@@ -21,25 +29,13 @@ out vec3 lightPos;
 
 
 void main(){
-
-	/*diffuse lighting*/
-	/*vec3 dirLight = vec3(0.0, 0.0, -1.0);
-	vec3 lightIntensity = vec3(0.8);
-	vec3 diffuseSurfaceColor = vec3(0.7);*/
-	
-	
-	
-	/*vec3 normalVec =  vec3(viewMat * modelMat * vec4(normals, 0.0));
-	
-	float cosAngleIncidence = dot(normalVec, dirLight)/(length(normalVec)*length(dirLight));
-	
-	eye_normal = diffuseSurfaceColor *(lightIntensity * cosAngleIncidence);*/
 	
 	/*Calculate normal matrix*/
 	mat4 normalMat = viewMat * modelMat;
 	normalMat = inverse(normalMat);
 	normalMat = transpose(normalMat);
 	
+	/*transform vertex positions to eye space*/
 	lightPos = vec3(viewMat * vec4(lightOrigin, 1.0));
 	
 	vert_position_eye = vec3(viewMat * modelMat * vec4(triangle_position, 1.0));

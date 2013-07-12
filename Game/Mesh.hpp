@@ -19,11 +19,6 @@ enum bufferDataType {
 	VBO_UNIFORM
 };
 
-enum drawMode {
-	DRAW_ORDERED,
-	DRAW_INDEXED
-};
-
 struct VBO {
 	VBO::VBO(bufferDataType type)
 		: dataType(type), index(0), attribPointerIndex(0), pointsPerVertex(0),
@@ -161,12 +156,9 @@ public:
 	float Mesh::isLightSource();
 	float Mesh::hasTexture();
 
+
 protected:
 
-	
-	
-
-	drawMode draw_mode;
 	vector<float> g_vp, g_vt, g_vn; //vertices, textures, and normals
 	vector<GLubyte> g_vi;
 
@@ -195,7 +187,6 @@ protected:
 	GLuint ubo, uboIndex;
 	GLubyte * blockBuffer;
 	enum{Ka, Kd, Ks, LightSource, Texture, numUniforms};
-	//GLchar **varNames;
 	GLuint blockIndices[numUniforms];
 	GLint uboSize,
 		  blockSize[numUniforms],

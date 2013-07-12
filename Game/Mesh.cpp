@@ -9,8 +9,6 @@
 #include "Mesh.hpp"
 #include "event_logger.h"
 
-//PFNGLACTIVETEXTUREPROC glActiveTexture = (PFNGLACTIVETEXTUREPROC) wglGetProcAddress ("glActiveTexture");
-
 using namespace std;
 
 //**********************************************************
@@ -21,13 +19,9 @@ using namespace std;
 Mesh::Mesh() : g_vert_count(0), attrib_pointer_count(0), meshLoaded(false),
 			   textureLoaded(0.0f), is_light_source(0.0f), modelMatrix(glm::mat4(1.0)), 
 			   parentNode(NULL), diffuse_reflectance(glm::vec3(0.5)), 
-			   apply_model_mat(glm::mat4(1.0)), baseModelMatrix(glm::mat4(1.0)),
-			   draw_mode(DRAW_ORDERED){
-}
+			   apply_model_mat(glm::mat4(1.0)), baseModelMatrix(glm::mat4(1.0)) {}
 
-Mesh::~Mesh(){ 
-
-}
+Mesh::~Mesh(){}
 
 //copy constructor
 Mesh::Mesh(const Mesh& other){

@@ -17,8 +17,6 @@ enum PointType {
 	NUM_PT
 };
 
-//glm::vec3 cross(float ax,float ay, float az, float bx, float by, float bz);
-//glm::vec3 cross(glm::vec3 a, glm::vec3 b);
 
 class DisplaceTerrain : public Mesh{
 public:

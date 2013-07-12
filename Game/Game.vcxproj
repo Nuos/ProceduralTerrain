@@ -90,14 +90,13 @@
     <ClCompile Include="mtrand.cpp" />
     <ClCompile Include="QuadTree.cpp" />
     <ClCompile Include="Shader.cpp" />
-    <ClCompile Include="ShaderList.cpp" />
+    <ClCompile Include="ShaderProgram.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BitmapFont.hpp" />
     <ClInclude Include="Camera.hpp" />
     <ClInclude Include="DisplaceTerrain.hpp" />
     <ClInclude Include="event_logger.h" />
-    <ClInclude Include="MarchingCubesLUT.hpp" />
     <ClInclude Include="MasterInclude.hpp" />
     <ClInclude Include="Mesh.hpp" />
     <ClInclude Include="MeshList.hpp" />
@@ -105,7 +104,7 @@
     <ClInclude Include="QuadTree.hpp" />
     <ClInclude Include="Quaternion.hpp" />
     <ClInclude Include="Shader.hpp" />
-    <ClInclude Include="ShaderList.hpp" />
+    <ClInclude Include="ShaderProgram.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

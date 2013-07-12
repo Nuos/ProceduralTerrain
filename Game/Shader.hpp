@@ -5,36 +5,31 @@
 #include <fstream>
 #include <vector>
 #include <GL/glew.h>
-//#include <GL/glext.h>
 #include "event_logger.h"
 
 using namespace std;
 
-namespace CustomShader{
+
+namespace shm {
 	class Shader {
 
 	public:	
 
 		Shader::Shader();
 		Shader::Shader(GLenum type);
+		Shader::Shader(const Shader& other);
+		Shader& Shader::operator=(const Shader& other);
 		Shader::~Shader();
+
 		void Shader::setType(GLenum type);
 
 		bool Shader::loadFile(const char *fileName);
 		bool Shader::compileShader();
 		bool Shader::isLoaded();
 
-		//enum BufferType { VBO, VAO };
-
-		////********************************
-		////	Vertex Buffer/Array Objects
-		////********************************
-		//void Shader::createBuffer(GLuint &index, BufferType type);
-		//void Shader::bindBuffer(GLuint &index);
-		//void Shader::bindVertexArray(GLuint &index);
-
 		//string Shader::getShader();
 		GLuint Shader::getHandle();
+		GLenum Shader::getType();
 
 
 		//****************Shader Error checking*****************************
@@ -47,8 +42,6 @@ namespace CustomShader{
 		bool typeInit, shaderLoaded;
 		GLuint handle;
 		string shaderStr;
-		const char * str;
-		char buffer[512];
 	};
 	
 }

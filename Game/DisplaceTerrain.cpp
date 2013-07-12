@@ -8,17 +8,6 @@
 #include <iomanip>
 #include <glm/gtc/matrix_transform.hpp>
 
-////math funcs
-//void normalize(glm::vec3 &vector){
-//	float mag = sqrtf((vector.x*vector.x)
-//					+ (vector.y*vector.y)
-//					+ (vector.z*vector.z));
-//	vector.x /= mag;
-//	vector.y /= mag;
-//	vector.z /= mag;
-//}
-
-//int logBase2(int num);
 
 float length(glm::vec3 vec){
 	float num = vec.x * vec.x + vec.y * vec.y + vec.z * vec.z;
@@ -39,38 +28,20 @@ glm::vec3 getAvgNormal(vector<glm::vec3> &normals, int i, int j, int n){
 	return ans;
 }
 
-//glm::vec3 getAvgQuadNormal(vector<glm::vec3> &normals, int i, int n){
+//glm::vec3 getQuadNormal(vector<glm::vec3> &normals, int i, int j) {
 //	glm::vec3 ans;
 //	ans = 
-//		normals[]
+//		normals[(6*(i)+(6))%(6) +	  (6*(j)+6)%(6)] +			//square (i,j)
+//		normals[(6*(i)+(6))%(6) +   (6*(j-1)+6)%(6)+5] +		//square (i,j-1) + 5
+//		normals[(6*(i)+(6))%(6) +   (6*(j-1)+6)%(6)+2] +		//square (i,j-1) + 2
+//		normals[(6*(i-1)+(6))%(6) + (6*(j-1)+6)%(6)+4] +		//sqaure (i-1,j-1) + 4
+//		normals[(6*(i-1)+(6))%(6) + (6*(j)+6)%(6)+1] + 		//square (i-1,j) + 1
+//		normals[(6*(i-1)+(6))%(6) + (6*(j)+6)%(6)+3];		//square (i-1,j) + 3
 //	ans /= 6;
 //	normalize(ans);
 //	return ans;
 //}
 
-////Cross product of 2 vectors
-////INPUT:	takes floats of 2 vectors and calculates cross product
-////OUTPUT:	glm::vec3 object
-//glm::vec3 cross(float ax,float ay, float az, float bx, float by, float bz){
-//	glm::vec3 ans;
-//	ans.x = ay*bz - az*by;
-//	ans.y = az*bx - ax*bz;
-//	ans.z = ax*by - ay*bx; 
-//	normalize(ans);
-//	return ans;
-//}
-//
-////Cross product of 2 vectors
-////INPUT:	Takes 2 glm::vec3 objects
-////OUTPUT:	glm::vec3 object
-//glm::vec3 cross(glm::vec3 a, glm::vec3 b){
-//	glm::vec3 ans;
-//	ans.x = a.y*b.z - a.z*b.y;
-//	ans.y = a.z*b.x - a.x*b.z;
-//	ans.z = a.x*b.y - a.y*b.x; 
-//	normalize(ans);
-//	return ans;
-//}
 
 DisplaceTerrain::DisplaceTerrain(int n, float height, float reduction, float tile_size, Camera *cam) 
 	: n(n), height(height), reduction(reduction), tile_size(tile_size), seed(-999),
@@ -152,18 +123,6 @@ DisplaceTerrain::~DisplaceTerrain(){
 	delete[] lod_ranges;
 	delete root;
 }
-
-//float avg(float num, ...){
-//	va_list args;
-//	float sum = 0;
-//
-//	va_start(args, num);
-//	for(int i = 0; i < num; i++)
-//		sum += va_arg(args, float);
-//	va_end(args);
-//	
-//	return (sum/num);
-//}
 
 
 void DisplaceTerrain::setSeed(int seed){

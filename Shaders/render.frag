@@ -21,6 +21,13 @@ uniform MaterialProperties {
 	uniform float hasTexture;
 };
 
+/*
+input terms to fragment shader:
+in vec3 DiffuseColor;
+in vec3 SpecularColor;
+in vec2 Texcoords;
+*/
+
 /*Light intensity*/
 vec3 Ia;
 vec3 Id;
